@@ -13,7 +13,7 @@ Julianne Chung created a Github repository with scripts for running genHyBR (htt
 <br>
 These scripts require the user to write two Matlab functions. The function afun.m should (1) Write a set of emissions to a file format that can be read by the forward/adjoint model of your choice, (2) should launch the forward and adjoint models, and (3) read in the results of those forward/adjoint model runs. This function is called at every iteration of the genHyBR algorithm, except the first iteration. The first iteration of geHyBR requires a function called afunadj.m. That function should (1) write a set of observations to a file format that can be read by the adjoint model of your choice, (2) run that adjoint model, and (3) read in the results of that adjoint model run. No forward model run is required for the function afunadj.m.
 
-Leyang Feng (lfeng13@jhu.edu) has written "afun" and "afunadj" functions for the GEOS-Chem methane adjoint models. These scripts from Leyang could be used as a template for creating your own "afun" and "afunadj" functions for GEOS-Chem.
+Leyang Feng (lfeng13@jhu.edu) has written "afun" and "afunadj" functions for the GEOS-Chem methane adjoint model. These scripts from Leyang could be used as a template for creating your own "afun" and "afunadj" functions for GEOS-Chem.
 
 **References**
 <br>
