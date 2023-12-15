@@ -1,4 +1,4 @@
-function [fmodel, amodel] = afunadj(u)
+function [amodel] = afunadj(u)
 %
 % Purpose: afun is a function handle in FGGK to run the forward and 
 % adjoint of the atmospheric model. In this script, I've created a 
