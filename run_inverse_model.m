@@ -178,16 +178,10 @@
 
 	% Create D
 	% Create time distance matrix
-	days = [];
-	for i = 1:ntimes
-	    for j = 1:ntimes
-	        if rem(abs(i-j),8) == 0
-	            days(i,j) = abs(i-j)/8;
-	        else
-	            days(i,j) = 10^6;
-	        end
-	    end
-	end
+	days = 1:ntimes;
+	days = days’;
+	days = days * ones(1,length(days));
+	days = abs(days - days’);
 
 	% Spherical covariance model
 	D = 1 - 1.5 .* (days   ./theta(4))  + 0.5 .* (days.^3   ./ theta(4).^3);
