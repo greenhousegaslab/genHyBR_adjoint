@@ -22,60 +22,98 @@ function [fmodel, amodel] = afun(emiss)
 % Write the emissions to file for GEOS-Chem  %
 %--------------------------------------------%
 
-	% Note from Scot: The code below is what I use for CO2. 
+	% code for methane.
 
 	disp('Write fluxes to netcdf file for GEOS-Chem model');
-
-	% Add ocean fluxes back into the flux vector
-	landall = repmat(landmap,ntimes,1);
-	landall = landall==1;
-	temp = ocean;
-	temp(landall) = temp(landall) + shat_backtransform;
-
-	% Convert the fluxes to netcdf. The GEOS-Chem adjoint will read in the fluxes in netcdf format.
-	temp = reshape(temp,72,46,ntimes); % 72 lon and 46 lat
 
 	% One additional, important note: the function "netcdf.create" only works if you are currently in the folder where you intend to write
 	% the netcdf file. Hence, I've included a command to "cd" into that folder.
 	currentdir = pwd;
 	cd(fluxpath);
 
+    %%% Keep this block for now
+    % For flexibility, lat and lon data are read-in in the for loop blow, 
+    % but if the performance is really bad, consider using the hard-code
+    % defined lat lon here
 	% Define latitudes and longitudes for the netcdf file
-        lons = -180:5:175;
-        lats = [-89 -86:4:86 89];
+    % lons = -126.875:0.625:-65;
+    % lats = 23:0.5:51;
+    %%% End - keep this block for now
+
+    % Check the incoming emiss dimension, and error out if need to 
+    % TODO: add dimension info in the driver script so to avoid reading of nc file now
+    % assert([100, 57, 265] == size(emiss), 'the dimension does not look right!')
 
 	% Loop over each time period in the inverse model
-    for j=1:ntimes,
+    for j=1:ntimes
 
 	% Convert day of year to month and day of month 
-	[yy month day HH MM] = datevec(datenum(year,1,j)); end;
- 
-	if month<10; month1=strcat('0',num2str(month)); else; month1=num2str(month); end;
-	if day<10; day1=strcat('0',num2str(day)); else; day1=num2str(day); end;
+	[yy, month, day, ~, ~, ~] = datevec(datetime(year,1,j));
 
-	% Open the netcdf file
-	ncid = netcdf.create(strcat('CO2.daily.geos.4x5.',num2str(yy),".",month1,".",day1,'.nc'),'NETCDF4');
+    year_str = num2str(yy);
+	if month<10; month_str = strcat('0',num2str(month)); else; month_str =num2str(month); end
+	if day<10;   day_str   = strcat('0',num2str(day));   else; day_str   =num2str(day);   end
+	
+    % Construct nc file name
+    nc_fn = strcat('HEMCO_sa_diagnostics.', year_str, month_str, day_str, '0000.nc');
+	
+    % Read lat/lon/AREA/hyam/hybm/lev/P0/time/... from template emissions
+    dat_EmisCH4_SoilAbsorb = ncread(strcat(fluxpath_template, '/', nc_fn), 'EmisCH4_SoilAbsorb');
+    dat_lat = ncread(strcat(fluxpath_template, '/', nc_fn), 'lat');
+    dat_lon = ncread(strcat(fluxpath_template, '/', nc_fn), 'lon');
+
+    % Open the new nc file
+    ncid = netcdf.create(nc_fn,'NETCDF4');
 
 	% Define the dimensions of the netcdf file
-	dimid1 = netcdf.defDim(ncid,'lon', length(lons));
-	dimid2= netcdf.defDim(ncid,'lat', length(lats));
+    dim_lon = netcdf.defDim(ncid,'lon', length(dat_lon));
+    dim_lat = netcdf.defDim(ncid,'lon', length(dat_lat));
 
 	% Define new variables for the netcdf file
-	my_varID = netcdf.defVar(ncid,'CO2_flux','double',[dimid1 dimid2]);
-	my_varID1= netcdf.defVar(ncid,'lon','double',[dimid1]);
-	my_varID2= netcdf.defVar(ncid,'lat','double',[dimid2]);
+    var_EmisCH4_Oil         = netcdf.defVar(ncid, 'EmisCH4_Oil',         'double',[dim_lon dim_lat]);
+    var_EmisCH4_Gas         = netcdf.defVar(ncid, 'EmisCH4_Gas',         'double',[dim_lon dim_lat]);
+    var_EmisCH4_Coal        = netcdf.defVar(ncid, 'EmisCH4_Coal',        'double',[dim_lon dim_lat]);
+    var_EmisCH4_Livestock   = netcdf.defVar(ncid, 'EmisCH4_Livestock',   'double',[dim_lon dim_lat]);
+    var_EmisCH4_Wastewater  = netcdf.defVar(ncid, 'EmisCH4_Wastewater',  'double',[dim_lon dim_lat]);
+    var_EmisCH4_Landfills   = netcdf.defVar(ncid, 'EmisCH4_Landfills',   'double',[dim_lon dim_lat]);
+    var_EmisCH4_Rice        = netcdf.defVar(ncid, 'EmisCH4_Rice',        'double',[dim_lon dim_lat]);
+    var_EmisCH4_OtherAnth   = netcdf.defVar(ncid, 'EmisCH4_OtherAnth',   'double',[dim_lon dim_lat]);
+    var_EmisCH4_BiomassBurn = netcdf.defVar(ncid, 'EmisCH4_BiomassBurn', 'double',[dim_lon dim_lat]);
+    var_EmisCH4_Wetlands    = netcdf.defVar(ncid, 'EmisCH4_Wetlands',    'double',[dim_lon dim_lat]);
+    var_EmisCH4_Termites    = netcdf.defVar(ncid, 'EmisCH4_Termites',    'double',[dim_lon dim_lat]);
+    var_EmisCH4_Lakes       = netcdf.defVar(ncid, 'EmisCH4_Lakes',       'double',[dim_lon dim_lat]);
+    var_EmisCH4_Seeps       = netcdf.defVar(ncid, 'EmisCH4_Seeps',       'double',[dim_lon dim_lat]);
+    var_EmisCH4_SoilAbsorb  = netcdf.defVar(ncid, 'EmisCH4_SoilAbsorb',  'double',[dim_lon dim_lat]);
+    var_lon = netcdf.defVar(ncid,'lon','double',dim_lon);
+    var_lat = netcdf.defVar(ncid,'lat','double',dim_lat);
+	
 	netcdf.endDef(ncid);
 
 	% Write data to the netcdf variable
-	netcdf.putVar(ncid,my_varID,temp(:,:,j));
-	netcdf.putVar(ncid,my_varID1,lons);
-	netcdf.putVar(ncid,my_varID2,lats);
+    netcdf.putVar(ncid,var_lon, dat_lon);
+    netcdf.putVar(ncid,var_lat, dat_lat);
+    netcdf.putVar(ncid, var_EmisCH4_SoilAbsorb, dat_EmisCH4_SoilAbsorb);
+    % useless note: picking oil to be the lucky one to store all values 
+    netcdf.putVar(ncid, var_EmisCH4_Oil, emiss(:,:,j));
+	dat_dummy = zeros(length(dat_lon), length(dat_lat));
+    netcdf.putVar(ncid, var_EmisCH4_Gas         , dat_dummy);
+    netcdf.putVar(ncid, var_EmisCH4_Coal        , dat_dummy);
+    netcdf.putVar(ncid, var_EmisCH4_Livestock   , dat_dummy);
+    netcdf.putVar(ncid, var_EmisCH4_Wastewater  , dat_dummy);
+    netcdf.putVar(ncid, var_EmisCH4_Landfills   , dat_dummy);
+    netcdf.putVar(ncid, var_EmisCH4_Rice        , dat_dummy);
+    netcdf.putVar(ncid, var_EmisCH4_OtherAnth   , dat_dummy);
+    netcdf.putVar(ncid, var_EmisCH4_BiomassBurn , dat_dummy);
+    netcdf.putVar(ncid, var_EmisCH4_Wetlands    , dat_dummy);
+    netcdf.putVar(ncid, var_EmisCH4_Termites    , dat_dummy);
+    netcdf.putVar(ncid, var_EmisCH4_Lakes       , dat_dummy);
+    netcdf.putVar(ncid, var_EmisCH4_Seeps       , dat_dummy);
 	
 	% Close the netcdf file
 	netcdf.close(ncid);	
 
-	end; % End of j loop
-	clear temp;
+    end % End of j loop
+	clear emiss;
 
 	% Move from the flux directory back to the previous directory
 	cd(currentdir);
@@ -84,17 +122,14 @@ function [fmodel, amodel] = afun(emiss)
 %------------------------------------------------%
 % Launch GEOS-Chem and wait for it to complete   %
 %------------------------------------------------%
-
-	% First, it's possible you'll need to delete some files from the run directory before
-	% you start GEOS-Chem (e.g., I'm not sure if the observation operator writes new
-	% model-data comparisons each time it runs, or if it appends to any existin model-data
-	% comparison file).
+    
+    % `bash run_simple` takes care of the cleaning of the dir temp files. 
 	
 	disp(['GEOS-Chem launched. Current iteration: ',num2str(count-1)]);
-	disp(fix(clock))
-	unix(['./run &> ADJOINT.out']);
+	disp(datetime)
+	unix(['bash run_simple &> ADJOINT.out']);
 	disp('GEOS-Chem model finished running. Continue calculating cost function.')
-	disp(fix(clock))
+	disp(datetime)
 
 
 %------------------------------%
@@ -102,16 +137,30 @@ function [fmodel, amodel] = afun(emiss)
 %------------------------------%
 
 	% Read in the forward model output and assign to object 'fmodel'
-	% [ FILL IN HERE!!!!! ]
+    % TODO: double check with Scot to confirm fmodel and amodel 
+    % TODO: think about the performance of reallines 
+    % TODO: check the dimensions of fmodel and amodel in fggk 
+    % TODO: VERY IMPORTANT!!!!!!
+    %       think and check the order of fmodel in here (aka the order of
+    %       diff.01.m), what I have right now could be wrong!!!!!
+    fn = strcat(geosdir,'diagadj/diff.CH4.01.m');
+    %fn = '/Users/leyang/Documents/JHU-projects/ATD/gcadj-support/tasks/tropomi-gen-syn/diff-files/NA-2022/diff_20180101-20180301/diff.CH4.01.m'
+    
+    dat_lines = readlines(fn);
+    [n_lines, ~] = size(dat_lines);
+
+    fmodel = zeors(n_lines, 1);
+    for i = 1:n_lines
+        line_parts = strsplit(dat_lines(i));
+        tango = line_parts(2);
+        tango = str2double(tango);
+        fmodel(i, 1) = tango;
+    end 
 
 	% Read in the gradient file and create object 'amodel'
-	% Here, I've assumed the gradient file is binary punch, and I have the function
-	% readBPCHSingle() if needed.
-	[ adj ] = readBPCHSingle(strcat(geosdir,'OptData/gctm.gdt.01'),'C_IJ_GDE','CO2bal', ...
-	strcat(geosdir,'tracerinfo.dat'),strcat(geosdir,'diaginfo.dat'),true,true,false);
-
+    % TODO: check dimension of adj maybe using assert
+    adj = ncread(strcat(geosdir,'OptData/gctm.gdt.01'), 'dJ_dESF');    
 	adj=reshape(adj,[],1);
 
 	% Only keep land cells
 	amodel = adj(landall);
-	
